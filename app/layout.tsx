@@ -11,6 +11,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"></meta>
         <meta name="theme-color" content="#00acc1" />
         <meta name="description" content="Toto Assistant" />
