@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useHeader } from '@/context/HeaderContext';
+import RoundButton from '@/components/RoundButton';
 
 export default function AppHeader() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,12 +14,15 @@ export default function AppHeader() {
                 {/* Left section: Back button */}
                 <div className="flex-1 flex">
                     {config.backButton?.enabled && (
-                        <button
+                        <RoundButton
+                            svgIconPath={{
+                                src: "/images/home.svg",
+                                alt: "Back"
+                            }}
                             onClick={config.backButton.onClick}
-                            className="p-2 rounded-full hover:bg-cyan-700 transition"
-                        >
-                            ←
-                        </button>
+                            size="s"
+                            secondary
+                        />
                     )}
                 </div>
 
@@ -36,12 +40,15 @@ export default function AppHeader() {
                     {config.rightButton}
 
                     {/* Menu Button */}
-                    <button
+                    <RoundButton
+                        svgIconPath={{
+                            src: "/images/menu.svg",
+                            alt: "Menu"
+                        }}
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="p-2 rounded-full hover:bg-cyan-700 transition"
-                    >
-                        ☰
-                    </button>
+                        size="s"
+                        slim
+                    />
                 </div>
             </div>
 
@@ -60,15 +67,15 @@ export default function AppHeader() {
                 style={{ backgroundColor: 'var(--background)' }}
             >
                 <div className="flex flex-col gap-4">
-                    <MenuItem onClick={() => {setIsMenuOpen(false); window.location.href = "/"}} label="Home" />
-                    <MenuItem onClick={() => {setIsMenuOpen(false);}} label="Settings" />
+                    <MenuItem onClick={() => {setIsMenuOpen(false); window.location.href = "/"}} icon="/images/home.svg" label="Home" />
+                    <MenuItem onClick={() => {setIsMenuOpen(false); window.location.href = "/settings"}} icon="/images/settings.svg" label="Settings" />
                 </div>
             </div>
         </>
     );
 }
 
-function MenuItem({ onClick, label }: { onClick?: () => void, label: string }) {
+function MenuItem({ onClick, icon, label }: { onClick?: () => void, icon: string, label: string }) {
 
     const [pressed, setPressed] = useState(false);
 
@@ -77,8 +84,9 @@ function MenuItem({ onClick, label }: { onClick?: () => void, label: string }) {
             onClick={onClick}
             onTouchStart={() => setPressed(true)}
             onTouchEnd={() => setPressed(false)}
-            className={`text-left p-3 rounded transition ${pressed ? 'bg-cyan-700' : 'hover:bg-cyan-700'}`}
+            className={`flex items-center gap-3 text-left p-3 rounded transition ${pressed ? 'bg-cyan-700' : 'hover:bg-cyan-700'}`}
         >
+            <img src={icon} alt={label} className="w-5 h-5" />
             {label}
         </button>
     );

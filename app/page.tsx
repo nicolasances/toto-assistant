@@ -4,87 +4,108 @@ import { useEffect, useState } from 'react';
 import { useHeader } from '@/context/HeaderContext';
 import { getStoredUserToken, googleSignIn } from '@/utils/AuthUtil';
 import { AuthAPI } from '@/api/AuthAPI';
+import RoundButton from '@/components/RoundButton';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { useAudio } from '@/context/AudioContext';
 
 export default function Home() {
 
-  const [loginNeeded, setLoginNeeded] = useState<boolean | null>(null)
-  const { setConfig } = useHeader();
+    const [loginNeeded, setLoginNeeded] = useState<boolean | null>(null)
+    const { setConfig } = useHeader();
+    const { play, stop, pause, replay, isSpeaking } = useAudio();
 
-  useEffect(() => {
-    setConfig({
-      title: 'Toto Assistant',
-    });
-  }, [setConfig]);
+    const onRecordingComplete = async (audioBlob: Blob) => {
+        console.log('Recording complete, transcribing...');
 
-  /**
-   * Verifies if the user is authenticated
-   */
-  const verifyAuthentication = async () => {
+        // Create a URL and play using the audio context
+        const audioUrl = URL.createObjectURL(audioBlob);
 
-    // Get the user from local storage
-    const user = getStoredUserToken()
+        play(audioUrl)
+    }
 
-    // Login is needed if the user is not in local storage
-    if (!user) {
+    const voiceRecording = useVoiceRecording({ onRecordingComplete: onRecordingComplete })
 
-      console.log("No user or Id Token found. Login needed.");
+    useEffect(() => { setConfig({ title: 'Toto Assistant', }); }, [setConfig]);
 
-      setLoginNeeded(true)
+    /**
+     * Verifies if the user is authenticated
+     */
+    const verifyAuthentication = async () => {
 
-      return;
+        // Get the user from local storage
+        const user = getStoredUserToken()
+
+        // Login is needed if the user is not in local storage
+        if (!user) {
+
+            console.log("No user or Id Token found. Login needed.");
+
+            setLoginNeeded(true)
+
+            return;
+
+        }
+
+        // The user is stored in local storage
+        // Verify its token
+        console.log("Verifying Id Token");
+        const verificationResult = await new AuthAPI().verifyToken(user.idToken)
+
+        // Check that the token hasn't expired
+        if (verificationResult.name == "TokenExpiredError") {
+
+            console.log("JWT Token Expired");
+
+            // If the token has expired, you need to login
+            setLoginNeeded(true);
+
+            return;
+
+        }
+
+        setLoginNeeded(false);
+
+        console.log("Token successfully verified.");
 
     }
 
-    // The user is stored in local storage
-    // Verify its token
-    console.log("Verifying Id Token");
-    const verificationResult = await new AuthAPI().verifyToken(user.idToken)
+    /**
+     * Triggers the Google SignIn process
+     */
+    const triggerSignIn = async () => {
 
-    // Check that the token hasn't expired
-    if (verificationResult.name == "TokenExpiredError") {
+        if (loginNeeded === true) {
 
-      console.log("JWT Token Expired");
+            const authenticatedUser = await googleSignIn()
 
-      // If the token has expired, you need to login
-      setLoginNeeded(true);
-
-      return;
+            if (authenticatedUser) setLoginNeeded(false)
+        }
 
     }
 
-    setLoginNeeded(false);
+    const toggleSpeechRecognition = async () => {
 
-    console.log("Token successfully verified.");
+        if (!voiceRecording.isRecording) {
+            await voiceRecording.startRecording();
+        }
+        else {
+            await voiceRecording.stopRecording();
+        }
 
-  }
-
-  /**
-   * Triggers the Google SignIn process
-   */
-  const triggerSignIn = async () => {
-
-    if (loginNeeded === true) {
-
-      const authenticatedUser = await googleSignIn()
-
-      if (authenticatedUser) setLoginNeeded(false)
     }
 
-  }
+    useEffect(() => { verifyAuthentication() }, [])
+    useEffect(() => { triggerSignIn() }, [loginNeeded])
 
-  useEffect(() => { verifyAuthentication() }, [])
-  useEffect(() => { triggerSignIn() }, [loginNeeded])
+    // Empty screen while Google SignIn is loading
+    if (loginNeeded == null) return (<div></div>);
+    if (loginNeeded === true) return (<div></div>);
 
-  // Empty screen while Google SignIn is loading
-  if (loginNeeded == null) return (<div></div>);
-  if (loginNeeded === true) return (<div></div>);
-
-  return (
-    <div className="app-content">
-      <div className="flex flex-col items-center justify-center p-8">
-        <h1>Welcome to Toto Assistant</h1>
-        <p>Your personal assistant is ready to help!</p>
-      </div>
-    </div>
-  );
+    return (
+        <div className="app-content">
+            <div className="flex flex-col items-center justify-center flex-1">
+                <RoundButton svgIconPath={{ src: "/images/microphone.svg", alt: "Speak", color: voiceRecording.isRecording ? "bg-red-700" : "" }} size='car' onClick={toggleSpeechRecognition} secondary={voiceRecording.isRecording} />
+            </div>
+        </div>
+    );
 }

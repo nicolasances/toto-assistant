@@ -29,6 +29,7 @@ cp .env.example .env.local
 Required environment variables:
 - `NEXT_PUBLIC_AUTH_API_ENDPOINT` - The authentication API endpoint
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` - Your Google OAuth Client ID
+- `NEXT_PUBLIC_WHISPERING_API_ENDPOINT` - The Whisper audio transcription API endpoint
 
 ### Running the Development Server
 
@@ -42,6 +43,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - ✅ Google OAuth Authentication
 - ✅ JWT Token Management
+- ✅ Voice Recording with MediaRecorder API
+- ✅ Audio Transcription via Whisper
+- ✅ Speech Recognition (browser native)
+- ✅ Audio Playback Controls
 - ✅ Responsive Design
 - ✅ Mobile-First Approach
 - ✅ Slide-out Navigation Menu
@@ -59,16 +64,21 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Project Structure
 
-```
-toto-assistant/
-├── api/              # API clients
-│   ├── TotoAPI.ts   # Base API wrapper
-│   └── AuthAPI.ts   # Authentication API client
+```├── AuthAPI.ts   # Authentication API client
+│   └── WhisperAPI.ts # Audio transcription API client
 ├── app/              # Next.js app directory
 │   ├── layout.tsx   # Root layout with providers
 │   ├── page.tsx     # Home page with auth flow
 │   ├── globals.css  # Global styles and CSS variables
 │   └── fonts.css    # Font imports
+├── components/       # React components
+│   └── AppHeader.tsx # Header with navigation
+├── context/          # React contexts
+│   ├── HeaderContext.tsx # Header configuration
+│   └── AudioContext.tsx  # Audio playback context
+├── hooks/            # Custom React hooks
+│   ├── useVoiceRecording.ts    # Voice recording hook
+│   └── useSpeechRecognition.ts # Speech recognition hook
 ├── components/       # React components
 │   └── AppHeader.tsx # Header with navigation
 ├── context/          # React contexts
@@ -102,3 +112,72 @@ The app uses the same color scheme and styling as the Tome project:
 - Comfortaa font family
 - Custom CSS variables for theming
 - Responsive layout with centered content and side panels
+
+## Audio Features Usage
+
+### Voice Recording
+
+```tsx
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { WhisperAPI } from '@/api/WhisperAPI';
+
+function MyComponent() {
+  const { isRecording, startRecording, stopRecording } = useVoiceRecording({
+    onRecordingComplete: async (audioBlob) => {
+      // Send to Whisper for transcription
+      const whisper = new WhisperAPI();
+      const result = await whisper.transcribeAudio(audioBlob, 'toto', 'sync');
+      console.log('Transcribed text:', result.text);
+    }
+  });
+
+  return (
+    <button onClick={isRecording ? stopRecording : startRecording}>
+      {isRecording ? 'Stop Recording' : 'Start Recording'}
+    </button>
+  );
+}
+```
+
+### Speech Recognition
+
+```tsx
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+
+function MyComponent() {
+  const { isListening, startListening } = useSpeechRecognition({
+    onTranscript: (text) => {
+      console.log('Recognized speech:', text);
+    },
+    timeoutMs: 10000
+  });
+
+  return (
+    <button onClick={startListening} disabled={isListening}>
+      {isListening ? 'Listening...' : 'Start Speech Recognition'}
+    </button>
+  );
+}
+```
+
+### Audio Playback
+
+```tsx
+import { useAudio } from '@/context/AudioContext';
+
+function MyComponent() {
+  const { play, stop, isSpeaking } = useAudio();
+
+  const playAudio = () => {
+    play('https://example.com/audio.mp3', () => {
+      console.log('Audio finished playing');
+    });
+  };
+
+  return (
+    <button onClick={isSpeaking ? stop : playAudio}>
+      {isSpeaking ? 'Stop' : 'Play Audio'}
+    </button>
+  );
+}
+```
