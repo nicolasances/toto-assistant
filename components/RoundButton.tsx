@@ -10,7 +10,8 @@ export default function RoundButton({
     loading,
     dark,
     secondary,
-    slim
+    slim,
+    breathe
 }: {
     icon?: React.ReactNode;
     svgIconPath?: {
@@ -28,6 +29,7 @@ export default function RoundButton({
     dark?: boolean;
     secondary?: boolean;
     slim?: boolean;
+    breathe?: boolean;
 }) {
     const [pressed, setPressed] = useState(false);
 
@@ -88,16 +90,18 @@ export default function RoundButton({
             aria-disabled={disabled}
         >
             {svgIconPath ? (
-                <MaskedSvgIcon
-                    src={svgIconPath.src}
-                    alt={svgIconPath.alt}
-                    size={iconSize}
-                    color={svgIconPath.color || svgIconColor}
-                    backgroundSrc={svgIconPath.backgroundSrc}
-                    backgroundOpacity={svgIconPath.backgroundOpacity}
-                />
+                <div className={breathe ? "animate-breathe" : ""}>
+                    <MaskedSvgIcon
+                        src={svgIconPath.src}
+                        alt={svgIconPath.alt}
+                        size={iconSize}
+                        color={svgIconPath.color || svgIconColor}
+                        backgroundSrc={svgIconPath.backgroundSrc}
+                        backgroundOpacity={svgIconPath.backgroundOpacity}
+                    />
+                </div>
             ) : (
-                <div className={`${iconClasses} ${iconColor}`}>{icon}</div>
+                <div className={`${iconClasses} ${iconColor} ${breathe ? "animate-breathe" : ""}`}>{icon}</div>
             )}
 
             {/* Looading animation */}
@@ -122,17 +126,25 @@ export default function RoundButton({
                             animation: "fillCircle 2s linear infinite"
                         }}
                     />
-                    <style>
-                        {`
+                </svg>
+            )}
+            
+            <style>
+                {`
                 @keyframes fillCircle {
                     0% { stroke-dashoffset: ${Math.PI * 2 * animatedCircleRadius}; }
                     50% { stroke-dashoffset: 0; }
                     100% { stroke-dashoffset: -${Math.PI * 2 * animatedCircleRadius}; }
                 }
+                @keyframes breathe {
+                    0%, 100% { opacity: 0.5; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.4); }
+                }
+                .animate-breathe {
+                    animation: breathe 2s ease-in-out infinite;
+                }
                 `}
-                    </style>
-                </svg>
-            )}
+            </style>
         </div>
     );
 }
