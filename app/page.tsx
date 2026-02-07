@@ -117,7 +117,7 @@ function VoiceRecordingButton({ onAudioRecorded, onAudioTranscribed }: { onAudio
         onAudioTranscribed?.(transcription.text ?? 'No text was transcribed')
 
         // Could make it now better with the following prompt to an LLM: 
-        // In the historical context of Italy in the mid 1400s, look at the following audio transcript and correct it to fit the context. DO NOT correct the content, but only the form, making sure that there are no weird words, out-of-context words. It's a transcription, so the model that does Speech to text did clearly not understand many words. Make sure to correct them given the context. Also format it nicely so that it's readable 
+        // In the historical context of <your context>, look at the following audio transcript and correct it to fit the context. DO NOT correct the content, but only the form, making sure that there are no weird words, out-of-context words. It's a transcription, so the model that does Speech to text did clearly not understand many words. Make sure to correct them given the context. Also format it nicely so that it's readable 
     }
 
     const onRecordingEvent = (event: MediaRecorderEvent) => {
