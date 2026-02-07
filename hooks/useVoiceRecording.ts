@@ -1,7 +1,11 @@
+import { on } from 'events';
 import { useState, useRef, useCallback } from 'react';
+
+export type MediaRecorderEvent = 'recordingStarted' | 'error';
 
 interface UseVoiceRecordingOptions {
     onRecordingComplete?: (audioBlob: Blob) => void;
+    onEvent?: (event: MediaRecorderEvent) => void;
     deviceId?: string;
 }
 
@@ -52,7 +56,7 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions = {}): UseVo
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: options.deviceId ? { exact: options.deviceId } : undefined,
-                    echoCancellation: false,
+                    echoCancellation: true,
                     noiseSuppression: false,
                     autoGainControl: true,
                 }
@@ -74,10 +78,12 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions = {}): UseVo
 
             mediaRecorder.addEventListener('start', () => {
                 console.log('MediaRecorder started');
+                options.onEvent?.('recordingStarted');
             });
 
             mediaRecorder.addEventListener('error', (event) => {
                 console.error('MediaRecorder error:', event.error);
+                options.onEvent?.('error');
             });
 
             // Start recording and collect audio chunks every 500ms
@@ -85,9 +91,12 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions = {}): UseVo
 
             // Set recording state to true
             setIsRecording(true);
+
             console.log('Recording started');
+
         } catch (error) {
             console.error('Error accessing microphone:', error);
+            options.onEvent?.('error');
         }
     }, [isSupported, options.deviceId]);
 
@@ -100,7 +109,7 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions = {}): UseVo
 
             // Update recording state to false
             setIsRecording(false);
-            
+
             if (!mediaRecorderRef.current) {
                 resolve();
                 return;

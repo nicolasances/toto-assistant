@@ -5,25 +5,26 @@ import { useHeader } from '@/context/HeaderContext';
 import { getStoredUserToken, googleSignIn } from '@/utils/AuthUtil';
 import { AuthAPI } from '@/api/AuthAPI';
 import RoundButton from '@/components/RoundButton';
-import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { MediaRecorderEvent, useVoiceRecording } from '@/hooks/useVoiceRecording';
 import { useAudio } from '@/context/AudioContext';
+import { on } from 'events';
+import { WhisperAPI } from '@/api/WhisperAPI';
 
 export default function Home() {
 
     const [loginNeeded, setLoginNeeded] = useState<boolean | null>(null)
     const { setConfig } = useHeader();
     const { play, stop, pause, replay, isSpeaking } = useAudio();
+    const [transcription, setTranscription] = useState<string>('')
 
     const onRecordingComplete = async (audioBlob: Blob) => {
         console.log('Recording complete, transcribing...');
 
         // Create a URL and play using the audio context
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // const audioUrl = URL.createObjectURL(audioBlob);
 
-        play(audioUrl)
+        // play(audioUrl)
     }
-
-    const voiceRecording = useVoiceRecording({ onRecordingComplete: onRecordingComplete })
 
     useEffect(() => { setConfig({ title: 'Toto Assistant', }); }, [setConfig]);
 
@@ -83,17 +84,6 @@ export default function Home() {
 
     }
 
-    const toggleSpeechRecognition = async () => {
-
-        if (!voiceRecording.isRecording) {
-            await voiceRecording.startRecording();
-        }
-        else {
-            await voiceRecording.stopRecording();
-        }
-
-    }
-
     useEffect(() => { verifyAuthentication() }, [])
     useEffect(() => { triggerSignIn() }, [loginNeeded])
 
@@ -104,8 +94,83 @@ export default function Home() {
     return (
         <div className="app-content">
             <div className="flex flex-col items-center justify-center flex-1">
-                <RoundButton svgIconPath={{ src: "/images/microphone.svg", alt: "Speak", color: voiceRecording.isRecording ? "bg-red-700" : "" }} size='car' onClick={toggleSpeechRecognition} secondary={voiceRecording.isRecording} />
+                <div className='flex-1'></div>
+                <VoiceRecordingButton onAudioRecorded={onRecordingComplete} onAudioTranscribed={setTranscription} />
+                <div className='flex-1 overflow-auto min-h-0 pt-8 px-4 text-base'>
+                    {transcription}
+                </div>
             </div>
         </div>
     );
 }
+
+function VoiceRecordingButton({ onAudioRecorded, onAudioTranscribed }: { onAudioRecorded?: (audioBlob: Blob) => void, onAudioTranscribed?: (transcription: string) => void }) {
+
+    const [status, setStatus] = useState<VoiceRecordingState>('ready')
+
+    const onRecordingComplete = async (audioBlob: Blob) => {
+        setStatus('ready');
+        onAudioRecorded?.(audioBlob)
+
+        const transcription = await transcribeAudio(audioBlob);
+
+        onAudioTranscribed?.(transcription.text ?? 'No text was transcribed')
+    }
+
+    const onRecordingEvent = (event: MediaRecorderEvent) => {
+        if (event == 'recordingStarted') setStatus('recordingStarted')
+        console.log(`Received event: ${event}`);
+    }
+
+    const voiceRecording = useVoiceRecording({
+        onRecordingComplete: onRecordingComplete,
+        onEvent: onRecordingEvent
+    })
+
+    const transcribeAudio = async (audioBlob: Blob) => {
+
+        // Call the API to transcribe the audio
+        const result = await new WhisperAPI().transcribeAudio(audioBlob, 'toto');
+
+        console.log(result);
+
+        return result;
+
+    }
+
+    const toggleSpeechRecognition = async () => {
+
+        if (!voiceRecording.isRecording) {
+            setStatus('recordingRequested')
+            await voiceRecording.startRecording();
+        }
+        else {
+            setStatus('stoppingRecording')
+            await voiceRecording.stopRecording();
+        }
+
+    }
+
+    const color = (status: VoiceRecordingState) => {
+        if (status == 'ready') return 'bg-lime-200';
+        else if (status == 'recordingStarted') return 'bg-red-700';
+
+        return '';
+    }
+
+    return (
+        <RoundButton
+            svgIconPath={{
+                src: "/images/microphone.svg",
+                alt: "Speak",
+                color: color(status)
+            }}
+            disabled={status == 'recordingRequested' || status == 'stoppingRecording'}
+            secondary={status != 'ready'}
+            size='car'
+            onClick={toggleSpeechRecognition}
+        />
+    )
+}
+
+type VoiceRecordingState = 'ready' | 'recordingRequested' | 'recordingStarted' | 'stoppingRecording' | 'recordingStopped' | 'error';
